@@ -33,8 +33,8 @@ int main() {
 	float battery_param_out_of_range [] = {50.0f, 85, 0.0f};
 	BMS battery_parameter[total_parameter];
 	int parameter_count;
-	float limit_min [] = {0.0f, 20, 0.0f };
-	float limit_max [] = {45.0f, 80, 0.8f};
+	float limit_min [] = {0.0f, 20, 0.4f };
+	float limit_max [] = {45.0f, 80, 0.9f};
 	
 	for (parameter_count = 0; parameter_count < total_parameter; parameter_count++)
 	{
