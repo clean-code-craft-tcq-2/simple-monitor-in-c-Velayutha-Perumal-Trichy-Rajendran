@@ -10,13 +10,13 @@ char *warning_message = "out of range!!!";
 char *warning_message = "auber Reichweite!!!";
 #endif
 
+sendAlert showAlertMessage = printToConsole;
+
 struct bms battery_parameter[TOTAL_DATA_SETS] = {
-													{25.0f, 10, 0.5f},
-													{50.0f, 20, 0.7f},
-													{1.0f, 15, 0.6f},
-													{40.0f, 27, 0.3f},
+													{25.0f, 50, 0.8f},
+													{47.0f, 30, 0.5f},
 													{20.0f, 45, 0.9f},
-													{43.0f, 25, 0.7}
+													{43.0f, 10, 0.7}
 												};
 
 int readBatteryParameters (int inputDataSetIndex)
@@ -28,91 +28,132 @@ int readBatteryParameters (int inputDataSetIndex)
 	return inputDataSetIndex;
 }
 
-int temperatureOutOfRange (int warning_level)
+int temperatureOutOfRange ()
+{
+	if (g_battery_parameter.temperature < temperatureAlertRange[TEMP_OUT_OF_RANGE].min || 
+		g_battery_parameter.temperature > temperatureAlertRange[TEMP_OUT_OF_RANGE].max)
+	{
+		parameter_alerts[TEMPERATURE].isBreached = OUT_OF_RANGE;
+	} 
+	 return parameter_alerts[TEMPERATURE].isBreached;
+}
+
+int temperatureInRange (int warning_level)
 {
 	if (g_battery_parameter.temperature > temperatureAlertRange[warning_level].min && 
 		g_battery_parameter.temperature <= temperatureAlertRange[warning_level].max)
 	{
-		parameter_alerts[TEMPERATURE].breached = ASSERTED;
-		parameter_alerts[TEMPERATURE].warning_lvl = warning_level;
-		parameter_alerts[TEMPERATURE].warning_type = temperatureAlertRange[warning_level].warning_type;
+		parameter_alerts[TEMPERATURE].isInRange = OUT_OF_RANGE;
+		showAlertMessage(temperatureAlertRange[warning_level].message);
 	} 
-	 return parameter_alerts[TEMPERATURE].breached;
+	 return parameter_alerts[TEMPERATURE].isInRange;
 }
 
-int socOutOfRange (int warning_level)
+int socOutOfRange ()
+{
+	if (g_battery_parameter.soc < socAlertRange[SOC_OUT_OF_RANGE].min ||
+		g_battery_parameter.soc > socAlertRange[SOC_OUT_OF_RANGE].max)
+	{
+		parameter_alerts[SOC].isBreached = OUT_OF_RANGE;
+	}
+	
+	return parameter_alerts[SOC].isBreached;
+}
+
+int socInRange (int warning_level)
 {
 	if (g_battery_parameter.soc > socAlertRange[warning_level].min && 
 		g_battery_parameter.soc <= socAlertRange[warning_level].max)
 	{
-		parameter_alerts[SOC].breached = ASSERTED;
-		parameter_alerts[SOC].warning_lvl = warning_level;
-		parameter_alerts[SOC].warning_type = socAlertRange[warning_level].warning_type;
+		parameter_alerts[SOC].isInRange = OUT_OF_RANGE;
+		showAlertMessage(socAlertRange[warning_level].message);
 	}
 	
-	return parameter_alerts[SOC].breached;
+	return parameter_alerts[SOC].isInRange;
 }
 
-int chargeRateExceedLimit (int warning_level)
+int chargeRateExceedLimit ()
+{
+	if (g_battery_parameter.chargeRate > chargeRateAlertRange[CR_OUT_OF_RANGE].max)
+	{
+		parameter_alerts[CHARGE_RATE].isBreached = OUT_OF_RANGE;
+	}
+	return parameter_alerts[CHARGE_RATE].isBreached;
+}
+
+int chargeRateWithinLimit (int warning_level)
 {
 	if (g_battery_parameter.chargeRate > chargeRateAlertRange[warning_level].min &&
 		g_battery_parameter.chargeRate <= chargeRateAlertRange[warning_level].max)
 	{
-		parameter_alerts[CHARGE_RATE].breached = ASSERTED;
-		parameter_alerts[CHARGE_RATE].warning_lvl = warning_level;
-		parameter_alerts[CHARGE_RATE].warning_type = chargeRateAlertRange[warning_level].warning_type;
+		parameter_alerts[CHARGE_RATE].isInRange = OUT_OF_RANGE;
+		showAlertMessage(chargeRateAlertRange[warning_level].message);
 	}
-	return parameter_alerts[CHARGE_RATE].breached;
+	return parameter_alerts[CHARGE_RATE].isInRange;
 }
 
 int batteryIsOk ()
 {
-	int parameter_count, status = GOOD;
+	int parameter_count, status = GOOD, warning_enabled;
 	
-	for (parameter_count = TEMPERATURE; parameter_count < TOTAL_PARAMETER; parameter_count++)
+	for (parameter_count = TEMPERATURE; parameter_count < TOTAL_PARAMETER_SUPPORTED; parameter_count++)
 	{
-		status |= parameter_alerts[parameter_count].parameterOutOfRange( parameter_alerts[parameter_count].warning_lvl );
+		warning_enabled = parameter_alerts[parameter_count].warning_enabled;
+		status |= parameter_alerts[parameter_count].parameterOutOfRange( );
+		if (warning_enabled)
+		{
+			parameter_alerts[parameter_count].alertIfParameterInRange(warning_enabled);
+		}
 	}
 	return status;
 }
 
-void printAlertToConsoleIfBreached ()
+void AlertIfBreached (sendAlert pushAlert)
 {	
 	int parameter_count;
+	char warningMesage [256];
 	
-	for (parameter_count = TEMPERATURE; parameter_count < TOTAL_PARAMETER; parameter_count++)
+	for (parameter_count = TEMPERATURE; parameter_count < TOTAL_PARAMETER_SUPPORTED; parameter_count++)
 	{
-		if (parameter_alerts[parameter_count].breached && 
-			parameter_alerts[parameter_count].warning_lvl != NORMAL)
+		if (parameter_alerts[parameter_count].isBreached)
 		{
-			printf("%s %s: %s\n", parameter_alerts[parameter_count].parameter_name, warning_message, parameter_alerts[parameter_count].warning_type);
+			sprintf (warningMesage, "%s %s", parameter_alerts[parameter_count].parameter_name, warning_message );
+			pushAlert(warningMesage);
 		}		
 	}
 }
 
+void printToConsole (char * warningMessage)
+{
+	
+	printf ("%s\n", warningMessage);
+	return;
+}
+
 void resetOldStatus ()
 {
-	parameter_alerts[TEMPERATURE].breached = NOT_ASSERTED;
-	parameter_alerts[SOC].breached = NOT_ASSERTED;
-	parameter_alerts[CHARGE_RATE].breached = NOT_ASSERTED;
+	parameter_alerts[TEMPERATURE].isBreached = IN_RANGE;
+	parameter_alerts[SOC].isBreached = IN_RANGE;
+	parameter_alerts[CHARGE_RATE].isBreached = IN_RANGE;
+	parameter_alerts[TEMPERATURE].isInRange = IN_RANGE;
+	parameter_alerts[SOC].isInRange = IN_RANGE;
+	parameter_alerts[CHARGE_RATE].isInRange = IN_RANGE;
 }
 
 int main() {
 	
-	int data_set;
+	int data_set = FIRST;
 	
-	for (data_set = FIRST; data_set < TOTAL_POSITIVE_DATA_SETS; data_set++)
-	{
-		readBatteryParameters(data_set);
-		assert(batteryIsOk() == GOOD);
-		printAlertToConsoleIfBreached ();
-		resetOldStatus();
-	}
-	for (data_set; data_set < TOTAL_DATA_SETS; data_set++)
+	readBatteryParameters(data_set);
+	assert(batteryIsOk() == GOOD);
+	AlertIfBreached (showAlertMessage);
+	resetOldStatus();
+	
+	for (data_set = SECOND; data_set < TOTAL_DATA_SETS; data_set++)
 	{
 		readBatteryParameters(data_set);
 		assert(batteryIsOk() == BAD);
-		printAlertToConsoleIfBreached ();
+		AlertIfBreached (showAlertMessage);
 		resetOldStatus();
 	}	
 	return 0;
