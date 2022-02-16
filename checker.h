@@ -15,25 +15,30 @@ enum alertStatus {NOT_ASSERTED, ASSERTED};
 enum params_list {TEMPERATURE, SOC, CHARGE_RATE};
 enum rangeType {IN_RANGE, TEST_ID_01};
 
-typedef int (*isParamterNormal)(void);
+/*Parameter validator Function declaration */
+int temperatureOutOfRange ();
+int socOutOfRange ();
+int chargeRateExceedLimit ();
 
-typedef struct _alerts_
-{
-	int breached;
-	char *parameter_name;
-	isParamterNormal parameterOutOfRange;
-}alert;
-
-typedef struct bms
+struct bms
 {
 	float temperature;
 	int soc;
 	float chargeRate;
-}BMS;
+}g_battery_parameter;
 
+typedef int (*isParamterNormal)(void);
 
-int temperatureOutOfRange ();
-int socOutOfRange ();
-int chargeRateExceedLimit ();
+struct alert
+{
+	int breached;
+	char *parameter_name;
+	isParamterNormal parameterOutOfRange;
+} parameter_alerts[TOTAL_PARAMETER] = 	{
+											{NOT_ASSERTED, "TEMPERATURE", temperatureOutOfRange},
+											{NOT_ASSERTED, "SOC", socOutOfRange},
+											{NOT_ASSERTED, "CHARGE_RATE", chargeRateExceedLimit}
+										};
+
 
 #endif

@@ -2,21 +2,22 @@
 #include <assert.h>
 #include <checker.h>
 
-BMS g_battery_parameter;
+#define ENGLISH
 
-alert parameter_alerts[TOTAL_PARAMETER] = 	{
-												{NOT_ASSERTED, "TEMPERATURE", temperatureOutOfRange},
-												{NOT_ASSERTED, "SOC", socOutOfRange},
-												{NOT_ASSERTED, "CHARGE_RATE", chargeRateExceedLimit}
-											};
-BMS battery_parameter[TOTAL_DATA_SETS] = 	{
-												{25.0f, 50, 0.5f},
-												{50.0f, 70, 0.7f},
-												{-1.0f, 30, 0.6f},
-												{30.0f, 90, 0.4f},
-												{40.0f, 10, 0.3f},
-												{20.0f, 45, 0.9f}
-											};
+#if defined(ENGLISH)
+char *warning_message = "out of range!!!";
+#elif defined(GERMAN)
+char *warning_message = "auber Reichweite!!!";
+#endif
+
+struct bms battery_parameter[TOTAL_DATA_SETS] = {
+													{25.0f, 50, 0.5f},
+													{50.0f, 70, 0.7f},
+													{-1.0f, 30, 0.6f},
+													{30.0f, 90, 0.4f},
+													{40.0f, 10, 0.3f},
+													{20.0f, 45, 0.9f}
+												};
 
 int readBatteryParameters (int inputDataSetIndex)
 {
@@ -76,7 +77,7 @@ void printAlertToConsoleIfBreached ()
 	{
 		if (parameter_alerts[parameter_count].breached)
 		{
-			printf("%s out of range!\n", parameter_alerts[parameter_count].parameter_name);
+			printf("%s %s\n", parameter_alerts[parameter_count].parameter_name, warning_message);
 		}		
 	}
 }
