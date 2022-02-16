@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <checker.h>
 
-const int total_row_index = 6;
 BMS g_battery_parameter;
 
 alert parameter_alerts[TOTAL_PARAMETER] = 	{
@@ -10,7 +9,7 @@ alert parameter_alerts[TOTAL_PARAMETER] = 	{
 												{NOT_ASSERTED, "SOC", socOutOfRange},
 												{NOT_ASSERTED, "CHARGE_RATE", chargeRateExceedLimit}
 											};
-BMS battery_parameter[total_row_index] = 	{
+BMS battery_parameter[TOTAL_DATA_SETS] = 	{
 												{25.0f, 50, 0.5f},
 												{50.0f, 70, 0.7f},
 												{-1.0f, 30, 0.6f},
@@ -91,15 +90,15 @@ void resetOldStatus ()
 
 int main() {
 	
-	int read_index = Index_01;
+	int data_set = FIRST;
 	
-	readBatteryParameters(read_index);
+	readBatteryParameters(data_set);
 	assert(batteryIsOk() == GOOD);
 	printAlertToConsoleIfBreached ();
 	resetOldStatus();
-	for (read_index = Index_02; read_index < total_row_index; read_index++)
+	for (data_set = SECOND; data_set < TOTAL_DATA_SETS; data_set++)
 	{
-		readBatteryParameters(read_index);
+		readBatteryParameters(data_set);
 		assert(batteryIsOk() == BAD);
 		printAlertToConsoleIfBreached ();
 		resetOldStatus();
