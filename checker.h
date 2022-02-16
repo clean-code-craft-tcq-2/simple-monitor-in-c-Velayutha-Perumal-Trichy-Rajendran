@@ -28,8 +28,11 @@ typedef struct bms
 	float temperature;
 	int soc;
 	float chargeRate;
-	
-}BMS g_battery_parameter;
+}BMS;
 
+
+int temperatureOutOfRange ();
+int socOutOfRange ();
+int chargeRateExceedLimit ();
 
 #endif

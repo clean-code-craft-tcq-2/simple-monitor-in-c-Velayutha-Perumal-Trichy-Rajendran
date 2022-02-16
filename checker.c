@@ -3,13 +3,14 @@
 #include <checker.h>
 
 const int total_row_index = 6;
+BMS g_battery_parameter;
 
 alert parameter_alerts[TOTAL_PARAMETER] = 	{
 												{NOT_ASSERTED, "TEMPERATURE", temperatureOutOfRange},
 												{NOT_ASSERTED, "SOC", socOutOfRange},
 												{NOT_ASSERTED, "CHARGE_RATE", chargeRateExceedLimit}
 											};
-BMS battery_parameter[total_test_case] = 	{
+BMS battery_parameter[total_row_index] = 	{
 												{25.0f, 50, 0.5f},
 												{50.0f, 70, 0.7f},
 												{-1.0f, 30, 0.6f},
@@ -24,6 +25,7 @@ int readBatteryParameters (int inputDataSetIndex)
 	g_battery_parameter.soc = battery_parameter[inputDataSetIndex].soc;
 	g_battery_parameter.chargeRate = battery_parameter[inputDataSetIndex].chargeRate;
 	
+	return inputDataSetIndex;
 }
 
 int temperatureOutOfRange ()
@@ -69,6 +71,8 @@ int batteryIsOk ()
 
 void printAlertToConsoleIfBreached ()
 {	
+	int parameter_count;
+	
 	for (parameter_count = TEMPERATURE; parameter_count < TOTAL_PARAMETER; parameter_count++)
 	{
 		if (parameter_alerts[parameter_count].breached)
@@ -88,16 +92,15 @@ void resetOldStatus ()
 int main() {
 	
 	int read_index = Index_01;
-	int parameter_count;
 	
 	readBatteryParameters(read_index);
-	assert(if (batteryIsOk() == GOOD));
+	assert(batteryIsOk() == GOOD);
 	printAlertToConsoleIfBreached ();
 	resetOldStatus();
 	for (read_index = Index_02; read_index < total_row_index; read_index++)
 	{
 		readBatteryParameters(read_index);
-		assert(if (batteryIsOk() == BAD));
+		assert(batteryIsOk() == BAD);
 		printAlertToConsoleIfBreached ();
 		resetOldStatus();
 	}	
