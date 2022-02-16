@@ -1,48 +1,102 @@
 #include <stdio.h>
 #include <assert.h>
+#include <checker.h>
 
-enum status {BAD, GOOD};
-const int total_parameter = 3;
-typedef struct bms
+const int total_test_case = 6;
+
+alert parameter_alerts[TOTAL_PARAMETER] = 	{
+												{0, "TEMPERATURE"},
+												{0, "SOC"},
+												{0, "CHARGE_RATE"}
+											};
+BMS battery_parameter[total_test_case] = 	{
+												{25.0f, 50, 0.5f},
+												{50.0f, 70, 0.7f},
+												{-1.0f, 30, 0.6f},
+												{30.0f, 90, 0.4f},
+												{40.0f, 10, 0.3f},
+												{20.0f, 45, 0.9f}
+											};
+
+int temperatureOutOfRange (float temperature)
 {
-	float actual_value;
-	struct range
+	int status = GOOD;
+	
+	if (temperature < TEMP_MIN || temperature > TEMP_MAX)
 	{
-		float min;
-		float max;
-	}limits;
-}BMS;
+		status = BAD;
+		parameter_alerts[TEMPERATURE].sendAlert = 1;
+	} 
+	 return status;
+}
 
+int socOutOfRange (int soc)
+{
+	int status = GOOD;
+	if (soc < SOC_MIN || soc > SOC_MAX)
+	{
+		status = BAD;
+		parameter_alerts[SOC].sendAlert = 1;
+	}
+	
+	return status;
+}
+
+int chargeRateExceedLimit (float chargeRate)
+{
+	int status = GOOD;
+	if (chargeRate > CHARGERATE_LIMIT)
+	{
+		status = BAD;
+		parameter_alerts[CHARGE_RATE].sendAlert = 1;
+	}
+	return status;
+}
 
 int batteryIsOk (BMS battery_params)
 {
-	int battery_status = GOOD;
+	int battery_status = OK;
 
-	if (battery_params.actual_value < battery_params.limits.min || 
-		battery_params.actual_value > battery_params.limits.max )
+	if (temperatureOutOfRange(battery_params.temperature) || 
+		socOutOfRange(battery_params.soc) || 
+		chargeRateExceedLimit (battery_params.chargeRate))
 	{
-		printf("out of range!\n");
-		battery_status = BAD;
+		battery_status = NOT_OK;
 	}
 	
 	return battery_status;
 }
 
+int alertIsSet(int alert)
+{
+	int alert_status = alert? ASSERTED : NOT_ASSERTED;
+	return alert_status;	
+}
+void printAlertToConsole (char *parameter_name)
+{	
+	printf("%s out of range!\n", parameter_name);
+}
+
 int main() {
-	float battery_param_in_range [] = {25.0f, 70, 0.7f};
-	float battery_param_out_of_range [] = {50.0f, 85, 0.0f};
-	BMS battery_parameter[total_parameter];
-	int parameter_count;
-	float limit_min [] = {0.0f, 20, 0.4f };
-	float limit_max [] = {45.0f, 80, 0.9f};
 	
-	for (parameter_count = 0; parameter_count < total_parameter; parameter_count++)
+	int test_case;
+	int parameter_count;
+	
+	assert(batteryIsOk(battery_parameter[IN_RANGE]));
+	
+	for (test_case = TEST_ID_01; test_case < total_test_case; test_case++)
 	{
-		battery_parameter[parameter_count].limits.min = limit_min[parameter_count];
-		battery_parameter[parameter_count].limits.max = limit_max[parameter_count];
-		battery_parameter[parameter_count].actual_value = battery_param_in_range[parameter_count];
-		assert(batteryIsOk(battery_parameter[parameter_count]));
-		battery_parameter[parameter_count].actual_value = battery_param_out_of_range[parameter_count];
-		assert(!batteryIsOk(battery_parameter[parameter_count]));
+		assert(!batteryIsOk(battery_parameter[test_case]));
 	}
+	
+	for (parameter_count = TEMPERATURE; parameter_count < TOTAL_PARAMETER; parameter_count++)
+	{
+		if (alertIsSet(parameter_alerts[parameter_count].sendAlert))
+		{
+			printAlertToConsole(parameter_alerts[parameter_count].parameter_name);
+		}
+			
+	}
+		
+	return 0;
 }
