@@ -2,12 +2,12 @@
 #include <assert.h>
 #include <checker.h>
 
-const int total_test_case = 6;
+const int total_row_index = 6;
 
 alert parameter_alerts[TOTAL_PARAMETER] = 	{
-												{0, "TEMPERATURE"},
-												{0, "SOC"},
-												{0, "CHARGE_RATE"}
+												{NOT_ASSERTED, "TEMPERATURE", temperatureOutOfRange},
+												{NOT_ASSERTED, "SOC", socOutOfRange},
+												{NOT_ASSERTED, "CHARGE_RATE", chargeRateExceedLimit}
 											};
 BMS battery_parameter[total_test_case] = 	{
 												{25.0f, 50, 0.5f},
@@ -18,85 +18,88 @@ BMS battery_parameter[total_test_case] = 	{
 												{20.0f, 45, 0.9f}
 											};
 
-int temperatureOutOfRange (float temperature)
+int readBatteryParameters (int inputDataSetIndex)
 {
-	int status = GOOD;
+	g_battery_parameter.temperature = battery_parameter[inputDataSetIndex].temperature;
+	g_battery_parameter.soc = battery_parameter[inputDataSetIndex].soc;
+	g_battery_parameter.chargeRate = battery_parameter[inputDataSetIndex].chargeRate;
 	
-	if (temperature < TEMP_MIN || temperature > TEMP_MAX)
+}
+
+int temperatureOutOfRange ()
+{
+	if (g_battery_parameter.temperature < TEMP_MIN || 
+		g_battery_parameter.temperature > TEMP_MAX)
 	{
-		status = BAD;
-		parameter_alerts[TEMPERATURE].sendAlert = 1;
+		parameter_alerts[TEMPERATURE].breached = ASSERTED;
 	} 
-	 return status;
+	 return parameter_alerts[TEMPERATURE].breached;
 }
 
-int socOutOfRange (int soc)
+int socOutOfRange ()
 {
-	int status = GOOD;
-	if (soc < SOC_MIN || soc > SOC_MAX)
+	if (g_battery_parameter.soc < SOC_MIN || 
+		g_battery_parameter.soc > SOC_MAX)
 	{
-		status = BAD;
-		parameter_alerts[SOC].sendAlert = 1;
+		parameter_alerts[SOC].breached = ASSERTED;
 	}
 	
+	return parameter_alerts[SOC].breached;
+}
+
+int chargeRateExceedLimit ()
+{
+	if (g_battery_parameter.chargeRate > CHARGERATE_LIMIT)
+	{
+		parameter_alerts[CHARGE_RATE].breached = ASSERTED;
+	}
+	return parameter_alerts[CHARGE_RATE].breached;
+}
+
+int batteryIsOk ()
+{
+	int parameter_count, status = GOOD;
+	
+	for (parameter_count = TEMPERATURE; parameter_count < TOTAL_PARAMETER; parameter_count++)
+	{
+		status |= parameter_alerts[parameter_count].parameterOutOfRange();
+	}
 	return status;
 }
 
-int chargeRateExceedLimit (float chargeRate)
-{
-	int status = GOOD;
-	if (chargeRate > CHARGERATE_LIMIT)
-	{
-		status = BAD;
-		parameter_alerts[CHARGE_RATE].sendAlert = 1;
-	}
-	return status;
-}
-
-int batteryIsOk (BMS battery_params)
-{
-	int battery_status = OK;
-
-	if (temperatureOutOfRange(battery_params.temperature) || 
-		socOutOfRange(battery_params.soc) || 
-		chargeRateExceedLimit (battery_params.chargeRate))
-	{
-		battery_status = NOT_OK;
-	}
-	
-	return battery_status;
-}
-
-int alertIsSet(int alert)
-{
-	int alert_status = alert? ASSERTED : NOT_ASSERTED;
-	return alert_status;	
-}
-void printAlertToConsole (char *parameter_name)
+void printAlertToConsoleIfBreached ()
 {	
-	printf("%s out of range!\n", parameter_name);
+	for (parameter_count = TEMPERATURE; parameter_count < TOTAL_PARAMETER; parameter_count++)
+	{
+		if (parameter_alerts[parameter_count].breached)
+		{
+			printf("%s out of range!\n", parameter_alerts[parameter_count].parameter_name);
+		}		
+	}
+}
+
+void resetOldStatus ()
+{
+	parameter_alerts[TEMPERATURE].breached = NOT_ASSERTED;
+	parameter_alerts[SOC].breached = NOT_ASSERTED;
+	parameter_alerts[CHARGE_RATE].breached = NOT_ASSERTED;
 }
 
 int main() {
 	
-	int test_case;
+	int read_index = Index_01;
 	int parameter_count;
 	
-	assert(batteryIsOk(battery_parameter[IN_RANGE]));
-	
-	for (test_case = TEST_ID_01; test_case < total_test_case; test_case++)
+	readBatteryParameters(read_index);
+	assert(if (batteryIsOk() == GOOD));
+	printAlertToConsoleIfBreached ();
+	resetOldStatus();
+	for (read_index = Index_02; read_index < total_row_index; read_index++)
 	{
-		assert(!batteryIsOk(battery_parameter[test_case]));
-	}
-	
-	for (parameter_count = TEMPERATURE; parameter_count < TOTAL_PARAMETER; parameter_count++)
-	{
-		if (alertIsSet(parameter_alerts[parameter_count].sendAlert))
-		{
-			printAlertToConsole(parameter_alerts[parameter_count].parameter_name);
-		}
-			
-	}
-		
+		readBatteryParameters(read_index);
+		assert(if (batteryIsOk() == BAD));
+		printAlertToConsoleIfBreached ();
+		resetOldStatus();
+	}	
 	return 0;
 }

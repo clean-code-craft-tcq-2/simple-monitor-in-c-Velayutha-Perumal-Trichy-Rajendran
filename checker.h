@@ -8,16 +8,19 @@
 #define CHARGERATE_LIMIT	0.8f
 #define TOTAL_PARAMETER		3
 
-enum status {GOOD, BAD};
+enum battery_conditon {GOOD, BAD};
+enum readIndex {Index_01, Index_02};
 enum alertStatus {NOT_ASSERTED, ASSERTED};
-enum battery_conditon {NOT_OK, OK};
 enum params_list {TEMPERATURE, SOC, CHARGE_RATE};
 enum rangeType {IN_RANGE, TEST_ID_01};
 
+typedef int (*isParamterNormal)(void);
+
 typedef struct _alerts_
 {
-	int sendAlert;
+	int breached;
 	char *parameter_name;
+	isParamterNormal parameterOutOfRange;
 }alert;
 
 typedef struct bms
@@ -26,5 +29,7 @@ typedef struct bms
 	int soc;
 	float chargeRate;
 	
-}BMS;
+}BMS g_battery_parameter;
+
+
 #endif
